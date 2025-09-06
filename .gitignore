@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 *.tbl*
 *.swp
+*.dat
+
+data_*/

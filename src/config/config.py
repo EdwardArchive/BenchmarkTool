@@ -2,9 +2,9 @@
 # -- coding: utf-8 --
 import os
 
-BENCHMARKS = ["ssb", "tpch"]
+BENCHMARKS = ["ssb", "tpch", "tpcds"]
 # the default benchmark to test
-BENCHMARK = "tpch"
+BENCHMARK = "tpcds"
 
 PROJECT_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."))
 # StarRocks's conf file
@@ -16,12 +16,12 @@ RESULT_ROOT = os.path.join(PROJECT_ROOT_PATH, "result")
 
 ################################################################################
 # load config info
-TPCH_CONCURRENCY_LOAD_CONFIG = {
-    "lineitem": 10,
-    "orders": 5
+TPCDS_CONCURRENCY_LOAD_CONFIG = {
+    "catalog_sales": 10,
+    "store_sales": 10
 }
 
 # concurrency for big table to load in parallel
 CONCURRENCY_LOAD_CONFIG = {
-    "tpch": TPCH_CONCURRENCY_LOAD_CONFIG
+    "tpcds": TPCDS_CONCURRENCY_LOAD_CONFIG
 }

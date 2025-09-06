@@ -64,7 +64,6 @@ class MysqlLib(object):
             self.connector = _mysql.connect(
                 host=query_dict["host"],
                 user=query_dict["user"],
-                port=int(query_dict["port"]),
                 passwd=query_dict["password"],
                 db=query_dict["database"]
             )
@@ -164,7 +163,7 @@ class StarrocksLib(object):
         self.mysql_user = conf_parser.starrocks_mysql_user
         self.mysql_password = conf_parser.starrocks_mysql_password
         self.database = conf_parser.starrocks_db
-        # self.http_address = conf_parser.starrocks_http_address
+        self.http_address = conf_parser.starrocks_http_address
         self.http_port = conf_parser.starrocks_http_port
 
     def get_http_response(self, url):
@@ -201,24 +200,24 @@ class StarrocksLib(object):
                 sql_list.append(line)
         return sql_list
 
-    def set_parallel(self, parallel_num):
+    def init_variables(self):
         """ """
-        sql = "set global parallel_fragment_exec_instance_num = %s" % parallel_num
-        return self.execute_sql(sql, "ddl")
+        sql = "set global cbo_push_down_aggregate_mode = 0;"
+        self.execute_sql(sql, "ddl")
 
     def get_parallel_cmd(self, query_dict):
         """ """
         cmd = "mysqlslap -h%s -P%s -u%s --concurrency=%s \
                --number-of-queries=%d \
-               --pre-query=\"set global parallel_fragment_exec_instance_num = %s;\" \
-               --post-query=\"set global parallel_fragment_exec_instance_num = 1;\" \
+               --pre-query=\"set global pipeline_dop = %s;\" \
+               --post-query=\"set global pipeline_dop = 0;\" \
                --create-schema=%s --query=\"%s\"" \
               % (self.mysql_host, self.mysql_port, self.mysql_user,
                  query_dict["concurrency"], query_dict["num_of_queries"],
                  query_dict["parallel_num"], query_dict["database"],
-                 query_dict["sql"])
+                 query_dict["sql"].replace("\\", "\\\\").replace('"', '\\"').replace("`", "\\`"))
         if self.mysql_password:
-            cmd = "%s -p%s" % (cmd, self.mysql_password)
+            cmd = "%s -p'%s'" % (cmd, self.mysql_password)
         return cmd
 
     def create_database(self, database_name):
@@ -264,7 +263,7 @@ class StarrocksLib(object):
         :return: list of dict
             [{"file_name": <file_name>, "sql": <sql_statement>}, ...]
         """
-        logging.info("get sql info from sql_dir:%s", dir_path)
+        # logging.info("get sql info from sql_dir:%s", dir_path)
         sql_list = []
 
         if not os.path.isdir(dir_path):
@@ -348,9 +347,9 @@ class StarrocksLib(object):
 
     def get_stream_load_cmd(self, file_path, table_name, columns):
         columns_config = """ -H "columns:%s" """ % ",".join(columns) if columns else ""
-        cmd = """curl --location-trusted -u %s:%s -T %s -H "column_separator:|" %s http://%s:%s/api/%s/%s/_stream_load""" % (
-                        self.mysql_user, self.mysql_password, file_path, columns_config,
-                        self.mysql_host, self.http_port, self.database, table_name)
+        cmd = f"""curl --location-trusted -u '{self.mysql_user}:{self.mysql_password}' \
+        -XPUT http://{self.http_address}:{self.http_port}/api/{self.database}/{table_name}/_stream_load \
+         -T {file_path} -H "column_separator:|" -H "Expect: 100-Continue" {columns_config} """
 
         return cmd
 

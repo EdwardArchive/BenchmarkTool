@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 BIN_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 

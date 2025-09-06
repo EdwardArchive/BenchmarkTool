@@ -12,7 +12,6 @@ from lib import starrocks_lib
 from utility import logger
 
 MYSQLSLAP_RESULT_STR = "Average number of seconds to run all queries"
-MYSQLSLAP_ERROR = "Error"
 
 
 class StarrocksBenchmark(object):
@@ -93,9 +92,9 @@ class StarrocksBenchmark(object):
             db_name = conf_parser.starrocks_db
             self.use_database(db_name)
 
-            # check sql dirs, there may be serveral directories for `all`
+            # check sql dir args
             test_sql_dirs = self.get_test_sql_dirs(sql_dir_name)
-            logging.info("test sql in dirs:[%s]", ", ".join(test_sql_dirs))
+            # logging.info("test sql in dirs:[%s]", ", ".join(test_sql_dirs))
 
             # execute query
             # sql\time(ms)\parallel_num   1   2   3
@@ -104,49 +103,51 @@ class StarrocksBenchmark(object):
             for sql_dir in test_sql_dirs:
                 sql_list = self.lib.get_query_table_sqls(sql_dir)
                 # logging.debug("get sql files under sql_dir:%s", sql_list)
-                # sort sql file for determinated test
                 self.sort_sql_list(sql_list)
-                for concurrency_num in conf_parser.concurrency_num_list:
-                    print("------ dataset: %s, concurrency: %s ------" % (sql_dir, concurrency_num))
-                    print("sql\\time(ms)\\parallel_num\t%s" % ("\t".join(conf_parser.parallel_num_list)))
-                    sql_file_exec_count = 0
-                    for sql_dict in sql_list:
-                        sql_file_name = sql_dict["file_name"]  # file name without extension `.sql`
-                        if sql_file and sql_file != sql_file_name:
-                            logging.debug("Not specified sql file, skip it. file='%s'", sql_file_name)
-                            continue
-                        else:
-                            logging.debug("Run sql file. file='%s'", sql_file_name)
 
-                        sql_file_exec_count += 1
-                        result = [sql_file_name]
+                self.lib.init_variables()
+                for concurrency_num in conf_parser.concurrency_num_list:
+                    #print("------ dataset: %s, concurrency: %s ------" % (sql_dir, concurrency_num))
+                    #print("sql\\time(ms)\\parallel_num\t%s" % ("\t".join(conf_parser.parallel_num_list)))
+                    print("SQL\t\tTime(ms)")
+                    all_time = 0
+                    for sql_dict in sql_list:
+                        result = [str.capitalize(sql_dict["file_name"])]
                         for parallel_num in conf_parser.parallel_num_list:
+                            time_cost = 0
+                            warm_up_query_dict = {"parallel_num": parallel_num,
+                                          "concurrency": concurrency_num,
+                                          "num_of_queries": 1,
+                                          "database": db_name,
+                                          "sql": sql_dict["sql"]}
+
+                            warm_up_cmd = self.lib.get_parallel_cmd(warm_up_query_dict)
+                            res, output = subprocess.getstatusoutput(warm_up_cmd)
+                            
                             query_dict = {"parallel_num": parallel_num,
                                           "concurrency": concurrency_num,
                                           "num_of_queries": conf_parser.num_of_queries,
                                           "database": db_name,
                                           "sql": sql_dict["sql"]}
-
                             cmd = self.lib.get_parallel_cmd(query_dict)
-                            logging.debug("Run sql file. cmd={%s}", cmd)
                             begin_time = time.time()
                             res, output = subprocess.getstatusoutput(cmd)
                             end_time = time.time()
-                            # logging.debug("res=%s, output={%s}", res, output)
-                            if res != 0 or (output and (MYSQLSLAP_RESULT_STR not in output
-                                                        or MYSQLSLAP_ERROR in output)):
-                                logging.error("exec sql error. sql: %s, output: \n%s", sql_file_name, output)
+                            if res != 0 or (output and MYSQLSLAP_RESULT_STR not in output):
+                                print("exec sql error. sql: %s, output: \n%s" % (
+                                    sql_dict["file_name"], output))
                                 result.append("-")
                             else:
-                                time_cost = (int(round(end_time * 1000)) - int(round(begin_time * 1000))) \
+                                time_cost = int((int(round(end_time * 1000)) - int(round(begin_time * 1000))) \
                                             / int(1 if conf_parser.num_of_queries < int(concurrency_num)
-                                                  else conf_parser.num_of_queries / int(concurrency_num))
+                                                  else conf_parser.num_of_queries / int(concurrency_num)))
                                 result.append(str(time_cost))
+                            all_time += time_cost
                             time.sleep(int(conf_parser.sleep_ms) / 1000.0)
                             # print(begin_time, end_time, time_cost, output)
 
-                        print("\t".join(result))
-                    logging.info("run %s sql files at concurrency:%s", sql_file_exec_count, concurrency_num)
+                        print("\t\t".join(result))
+                    print("All time(ms):\t%s" % all_time)
         finally:
             self.close_starrocks()
 
@@ -228,7 +229,7 @@ if __name__ == '__main__':
     elif args.log_verbose:
         logger.LOG_LEVEL = logging.DEBUG
     logger.init_logging(level=logger.LOG_LEVEL)
-    logging.info("benchmark args:%s", args)
+    # logging.info("benchmark args:%s", args)
 
     if args.performance and args.check_result:
         print("-c and -p should not be assigned at the same time.\n")
