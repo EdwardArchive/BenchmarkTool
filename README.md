@@ -219,16 +219,16 @@ unzip tpcds-poc-1.0
 cd tpcds-poc-1.0
 
 # Generate 100GB test data
-sh bin/gen_data/gen-tpcds.sh 100 data_100
+bash bin/gen_data/gen-tpcds.sh 100 data_100
 
 # Create table schema
-sh bin/create_db_table.sh ddl_100
+bash bin/create_db_table.sh ddl_100
 
 # Load data
-sh bin/stream_load.sh data_100
+bash bin/stream_load.sh data_100
 
 # Run performance test
-sh bin/benchmark.sh -p -d tpcds
+bash bin/benchmark.sh -p -d tpcds
 ```
 
 ## Project directories in detail
