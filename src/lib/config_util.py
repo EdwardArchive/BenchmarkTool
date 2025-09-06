@@ -39,6 +39,4 @@ class ConfigUtil(object):
         if concurrency_load_config and table_name in concurrency_load_config:
             concurrency_num = concurrency_load_config[table_name]
             logging.info("concurrency load number for table: %s is %d.", table_name, concurrency_num)
-        else:
-            logging.info("concurrency load number for table: %s is not set, use 1 by default.", table_name)
         return concurrency_num

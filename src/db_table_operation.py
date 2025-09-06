@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-# -- coding: utf-8 --
 import argparse
 import logging
 import os
 import subprocess
 import sys
 import threading
+import re
 
 
 from lib import conf_parser
@@ -17,15 +16,21 @@ from utility import logger
 class StreamLoadThread(threading.Thread):
     def __init__(self, table_name, file_path):
         threading.Thread.__init__(self)
-        self.table_name = table_name
+        self.table_name = re.split('_[0-9]', table_name)[0]
         self.file_path = file_path
         self.lib = starrocks_lib.StarrocksLib()
 
     def run(self):
-        logging.info("stream load start. table: %s, path: %s", self.table_name, self.file_path)
+        #logging.info("stream load start. table: %s, path: %s", self.table_name, self.file_path)
         cmd = self.lib.get_stream_load_cmd(self.file_path, self.table_name, ConfigUtil.get_columns(self.table_name))
         logging.info("stream load command: {%s}", cmd)
         res, output = subprocess.getstatusoutput(cmd)
+
+        body, _, status_line = output.rpartition("HTTP_STATUS:")
+        
+        print("b",body,"b\n")
+        print(status_line)
+
         is_success = False
         msg = None
         error_url = None
