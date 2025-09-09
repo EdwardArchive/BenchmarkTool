@@ -8,3 +8,5 @@ __pycache__/
 *.dat
 
 data_*/
+
+conf/starrocks.conf

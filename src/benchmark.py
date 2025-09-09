@@ -91,7 +91,7 @@ class StarrocksBenchmark(object):
             # use db
             db_name = conf_parser.starrocks_db
             self.use_database(db_name)
-
+            print("use database: %s" % db_name)
             # check sql dir args
             test_sql_dirs = self.get_test_sql_dirs(sql_dir_name)
             # logging.info("test sql in dirs:[%s]", ", ".join(test_sql_dirs))
@@ -109,26 +109,26 @@ class StarrocksBenchmark(object):
                 for concurrency_num in conf_parser.concurrency_num_list:
                     #print("------ dataset: %s, concurrency: %s ------" % (sql_dir, concurrency_num))
                     #print("sql\\time(ms)\\parallel_num\t%s" % ("\t".join(conf_parser.parallel_num_list)))
-                    print("SQL\t\tTime(ms)")
                     all_time = 0
                     for sql_dict in sql_list:
                         result = [str.capitalize(sql_dict["file_name"])]
                         for parallel_num in conf_parser.parallel_num_list:
                             time_cost = 0
-                            warm_up_query_dict = {"parallel_num": parallel_num,
-                                          "concurrency": concurrency_num,
-                                          "num_of_queries": 1,
-                                          "database": db_name,
-                                          "sql": sql_dict["sql"]}
+                            # warm_up_query_dict = {"parallel_num": parallel_num,
+                            #               "concurrency": concurrency_num,
+                            #               "num_of_queries": 1,
+                            #               "database": db_name,
+                            #               "sql": sql_dict["sql"]}
 
-                            warm_up_cmd = self.lib.get_parallel_cmd(warm_up_query_dict)
-                            res, output = subprocess.getstatusoutput(warm_up_cmd)
-                            
+                            # warm_up_cmd = self.lib.get_parallel_cmd(warm_up_query_dict)
+                            # res, output = subprocess.getstatusoutput(warm_up_cmd)
                             query_dict = {"parallel_num": parallel_num,
                                           "concurrency": concurrency_num,
                                           "num_of_queries": conf_parser.num_of_queries,
                                           "database": db_name,
                                           "sql": sql_dict["sql"]}
+                            # print("exec sql: %s, parallel_num: %s, concurrency: %s, num_of_queries: %s" % (
+                            #     sql_dict["file_name"], parallel_num, concurrency_num, conf_parser.num_of_queries))
                             cmd = self.lib.get_parallel_cmd(query_dict)
                             begin_time = time.time()
                             res, output = subprocess.getstatusoutput(cmd)
